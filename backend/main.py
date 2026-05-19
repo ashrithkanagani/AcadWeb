@@ -159,7 +159,8 @@ app.include_router(reminders.router)
 app.include_router(files.router)
 app.include_router(photos.router)
 
-@app.get("/",methods=["GET", "HEAD"])
+@app.get("/")
+@app.head("/")
 def root():
     return {"message": "AcadMind API running with Multi-User support."}
 
