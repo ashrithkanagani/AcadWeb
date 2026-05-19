@@ -160,7 +160,6 @@ app.include_router(files.router)
 app.include_router(photos.router)
 
 @app.get("/")
-@app.head("/")
 def root():
     return {"message": "AcadMind API running with Multi-User support."}
 
