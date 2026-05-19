@@ -214,13 +214,13 @@ export default function Login() {
             style={{ width: '100%', justifyContent: 'center', marginBottom: '16px' }}
             disabled={isLoading}
           >
-            {isLoading ? 'Loading...' : isSignup ? 'Create Account' : 'Sign In'}
+            {isLoading ?  'Create Account' : 'Sign In'}
           </button>
         </form>
 
         {/* Toggle */}
         <div style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          {isSignup ? 'Already have an account? ' : "Don't have an account? "}
+          
           <button
             onClick={() => {
               setIsSignup(!isSignup);
@@ -238,32 +238,11 @@ export default function Login() {
               textDecoration: 'underline',
             }}
           >
-            {isSignup ? 'Sign In' : 'Sign Up'}
+            {/* {isSignup ? 'Sign In' : 'Sign Up'} */}
           </button>
         </div>
 
         {/* Demo Credentials */}
-        <div
-          style={{
-            marginTop: '24px',
-            padding: '16px',
-            background: 'rgba(91, 238, 197, 0.1)',
-            border: '1px solid rgba(91, 238, 197, 0.3)',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '0.8rem',
-            color: 'var(--text-muted)',
-          }}
-        >
-          <div style={{ fontWeight: '600', color: 'var(--mint)', marginBottom: '8px' }}>
-            Demo Accounts:
-          </div>
-          <div style={{ marginBottom: '4px' }}>
-            <strong>acc1:</strong> ash / 123
-          </div>
-          <div>
-            <strong>acc2:</strong> ash1 / 234
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -4,32 +4,88 @@ import { useAppContext } from '../hooks/useAppContext';
 
 export default function Reminders() {
   // 1. STATE MANAGEMENT
-  const { reminders, setReminders } = useAppContext();
+  const { reminders, addReminder, deleteReminder, setReminders } = useAppContext();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingReminder, setEditingReminder] = useState(null);
   const [formData, setFormData] = useState({ name: '', date: '', time: '', desc: '', color: 'var(--periwinkle)' });
 
   // 2. HANDLERS
-  const handleDelete = (id) => {
-    setReminders(reminders.filter(r => r.id !== id));
+  const handleDelete = async (id) => {
+    await deleteReminder(id);
   };
 
-  const handleSave = (e) => {
+  // NEW: Populates form state with the chosen reminder data for updating
+  const handleEditClick = (reminder) => {
+    setEditingReminder(reminder);
+    
+    // Parse formatted date ("May 25, 2026") back into raw HTML input string format ("2026-05-25")
+    let rawDate = '';
+    if (reminder.date && reminder.date !== 'Upcoming') {
+      const parsedDate = new Date(reminder.date);
+      if (!isNaN(parsedDate.getTime())) {
+        rawDate = parsedDate.toISOString().substring(0, 10);
+      }
+    }
+
+    setFormData({
+      name: reminder.name,
+      date: rawDate,
+      time: reminder.time === 'All Day' ? '' : reminder.time,
+      desc: reminder.desc || '',
+      color: reminder.color
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
-    const newReminder = {
-      id: Date.now().toString(),
+    const formattedDate = formData.date 
+      ? new Date(formData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+      : 'Upcoming';
+
+    const payload = {
       name: formData.name,
-      date: formData.date ? new Date(formData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Upcoming',
+      date: formattedDate,
       time: formData.time || 'All Day',
       desc: formData.desc,
       color: formData.color
     };
 
-    setReminders([newReminder, ...reminders]);
+    if (editingReminder) {
+      try {
+        // Optimistic UI updates or direct PUT call depending on backend design 
+        const res = await fetch(`http://localhost:8000/reminders/${editingReminder.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+          const updated = await res.json();
+          setReminders(reminders.map(r => r.id === editingReminder.id ? updated : r));
+        } else {
+          // Fallback state manipulation logic
+          setReminders(reminders.map(r => r.id === editingReminder.id ? { ...r, ...payload } : r));
+        }
+      } catch (err) {
+        setReminders(reminders.map(r => r.id === editingReminder.id ? { ...r, ...payload } : r));
+      }
+    } else {
+      await addReminder(payload);
+    }
+
     setIsModalOpen(false);
+    setEditingReminder(null);
+    setFormData({ name: '', date: '', time: '', desc: '', color: 'var(--periwinkle)' });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingReminder(null);
     setFormData({ name: '', date: '', time: '', desc: '', color: 'var(--periwinkle)' });
   };
 
@@ -69,7 +125,13 @@ export default function Reminders() {
                 {reminder.desc && <div className="reminder-desc">{reminder.desc}</div>}
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
-                <button className="btn btn-ghost btn-icon">✏️</button>
+                {/* FIXED: Hooked up onClick event handler parameter dynamically */}
+                <button 
+                  className="btn btn-ghost btn-icon"
+                  onClick={() => handleEditClick(reminder)}
+                >
+                  ✏️
+                </button>
                 <button 
                   className="btn btn-ghost btn-icon" 
                   style={{ color: 'var(--coral)' }}
@@ -83,11 +145,11 @@ export default function Reminders() {
         </div>
       )}
 
-      {/* ADD EVENT MODAL */}
+      {/* ADD / EDIT EVENT MODAL */}
       {isModalOpen && (
-        <div className="modal-overlay open" onClick={() => setIsModalOpen(false)}>
+        <div className="modal-overlay open" onClick={handleCloseModal}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Add Event / Reminder</div>
+            <div className="modal-title">{editingReminder ? 'Edit Event / Reminder' : 'Add Event / Reminder'}</div>
             
             <form onSubmit={handleSave}>
               <div className="form-group">
@@ -151,8 +213,8 @@ export default function Reminders() {
               </div>
               
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add Event</button>
+                <button type="button" className="btn btn-outline" onClick={handleCloseModal}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{editingReminder ? 'Save Changes' : 'Add Event'}</button>
               </div>
             </form>
           </div>

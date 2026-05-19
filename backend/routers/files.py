@@ -1,54 +1,103 @@
-from fastapi import APIRouter, HTTPException
+import os
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from database import files_collection
 from bson import ObjectId
+import cloudinary
+import cloudinary.uploader
+from dotenv import load_dotenv
+
+# 1. Load Keys and Connect to Cloudinary
+load_dotenv()
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
-# 1. Define what data React will send us when a file is uploaded
-class FileItem(BaseModel):
+# 2. Pydantic Model strictly for Folder Creation
+class FolderItem(BaseModel):
     username: str
-    filename: str
-    file_type: str
-    file_size: str
+    type: str = "folder"
+    name: str
+    parentId: str = "root"
 
-# 2. Helper to translate MongoDB data into React-friendly JSON
+# 3. Helper to translate MongoDB data into React-friendly JSON
 def file_helper(file) -> dict:
     return {
-        "id": str(file["_id"]), # Converts MongoDB's weird ObjectId into a normal string
+        "id": str(file["_id"]),
         "username": file["username"],
-        "filename": file["filename"],
-        "file_type": file.get("file_type", "unknown"),
-        "file_size": file.get("file_size", "0 KB")
+        "type": file.get("type", "file"),
+        "name": file.get("name") or file.get("filename"),
+        "filename": file.get("filename"),
+        "file_type": file.get("file_type"),
+        "file_size": file.get("file_size"),
+        "url": file.get("url"),
+        "parentId": file.get("parentId", "root")
     }
 
-# 3. GET ROUTE: Send all files to React when the page loads
+# 4. GET ROUTE: Send all files & folders to React
 @router.get("/{username}")
 async def get_user_files(username: str):
     files = []
-    # Search the database for any files belonging to this specific user
     cursor = files_collection.find({"username": username})
     async for document in cursor:
         files.append(file_helper(document))
     return files
 
-# 4. POST ROUTE: Save a new file record to the database
+# 5. POST ROUTE (FILES): Catches FormData and sends to Cloudinary
 @router.post("/")
-async def add_file(file: FileItem):
-    # Insert the data into MongoDB
-    file_dict = file.dict()
-    result = await files_collection.insert_one(file_dict)
-    
-    # Grab the newly saved file (with its new ID) and send it back to React
-    new_file = await files_collection.find_one({"_id": result.inserted_id})
-    return file_helper(new_file)
+async def add_file(
+    username: str = Form(...),
+    parentId: str = Form("root"),
+    file: UploadFile = File(...)
+):
+    try:
+        # Read the physical file
+        file_bytes = await file.read()
 
-# 5. DELETE ROUTE: Remove a file when the user clicks the trash can
+        # Send it to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            file_bytes,
+            resource_type="auto",
+            folder=f"acadweb/{username}" 
+        )
+
+        # Save the lightweight URL to MongoDB
+        file_doc = {
+            "username": username,
+            "type": "file",
+            "name": file.filename,
+            "filename": file.filename,
+            "file_type": file.content_type,
+            "file_size": f"{(len(file_bytes) / 1024):.2f} KB",
+            "url": upload_result.get("secure_url"), # Cloudinary Link!
+            "parentId": parentId
+        }
+
+        result = await files_collection.insert_one(file_doc)
+        new_file = await files_collection.find_one({"_id": result.inserted_id})
+        return file_helper(new_file)
+
+    except Exception as e:
+        print(f"Upload Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 6. POST ROUTE (FOLDERS): Catches JSON specifically for making folders
+@router.post("/folder")
+async def add_folder(folder: FolderItem):
+    payload = folder.dict()
+    result = await files_collection.insert_one(payload)
+    new_folder = await files_collection.find_one({"_id": result.inserted_id})
+    return file_helper(new_folder)
+
+# 7. DELETE ROUTE: Remove a file or folder
 @router.delete("/{file_id}")
 async def delete_file(file_id: str):
-    # MongoDB requires the ID to be wrapped in ObjectId() to delete it
     result = await files_collection.delete_one({"_id": ObjectId(file_id)})
     if result.deleted_count == 1:
-        return {"message": "File deleted successfully"}
+        return {"message": "Item deleted successfully"}
     
-    raise HTTPException(status_code=404, detail="File not found")
+    raise HTTPException(status_code=404, detail="Item not found")

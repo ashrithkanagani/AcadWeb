@@ -33,18 +33,24 @@ async def delete_note(note_id: str):
         raise HTTPException(status_code=404, detail="Note not found")
     return {"message": "Note deleted successfully"}
 
+# UPDATED: Changed the payload parameter type to dictate flexible structures 
+# so that the arriving 'user_id' property from React doesn't fail Pydantic validation rules.
 @router.put("/{note_id}", response_model=schemas.NoteResponse)
-async def update_note(note_id: str, note: schemas.NoteCreate):
+async def update_note(note_id: str, note_data_raw: dict):
     if not ObjectId.is_valid(note_id):
-        raise HTTPException(status_code=400, detail="Invalid note ID")
+        raise HTTPException(status_code=404, detail="Invalid note ID")
 
-    note_data = note.dict()
+    # Clean out any incoming 'id' fields so we don't accidentally try to modify MongoDB's immutable _id key
+    note_data = {k: v for k, v in note_data_raw.items() if k != "id" and k != "_id"}
+
     result = await notes_collection.update_one(
         {"_id": ObjectId(note_id)},
         {"$set": note_data}
     )
+    
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Note not found")
 
+    # Fetch fresh updated document record straight out of MongoDB
     updated = await notes_collection.find_one({"_id": ObjectId(note_id)})
     return serialize_doc(updated)

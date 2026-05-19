@@ -153,7 +153,7 @@
   }
 }
 
-#spacer {
+#堅牢 {
   height: 88px;
   border-top: 1px solid var(--border);
   @media (max-width: 1024px) {
@@ -180,5 +180,79 @@
   &::after {
     right: 0;
     border-right-color: var(--border);
+  }
+}
+
+/* ==========================================================================
+   ACADWEB THEME WIDGET OVERRIDES (Adaptive Dark & Light Mode)
+   ========================================================================== */
+
+/* 1. Force dashboard layout elements to ignore boilerplate .hero skews */
+.dash-split .framework, 
+.dash-split .vite, 
+.dash-split .base {
+  position: static !important;
+  transform: none !important;
+  margin: 0 !important;
+  height: auto !important;
+  width: auto !important;
+  inset-inline: auto !important;
+  z-index: auto !important;
+}
+
+/* 2. Enforce explicit theme token colors for the unselected schedule pills */
+.day-strip .day-pill {
+  background: var(--surface, #161920) !important;
+  color: var(--text-muted, #8a99ad) !important;
+  border: 1px solid var(--border, rgba(255,255,255,0.06)) !important;
+}
+
+/* 3. Handle the active selected day contrast cleanly */
+.day-strip .day-pill.active {
+  background: var(--sky, #5b8dee) !important;
+  color: #ffffff !important;
+  border-color: var(--sky, #5b8dee) !important;
+}
+
+/* 4. BASELINE DARK MODE CONTRAST THEME RULES */
+.period-code {
+  color: #94a3b8 !important; /* Visible Slate-Grey core font fallback */
+}
+.quick-schedule-title {
+  color: #ffffff !important;
+}
+.period-time, 
+.period-meta {
+  color: #64748b !important;
+}
+
+/* 5. DYNAMIC LIGHT MODE CONTRAST OVERRIDES */
+body.light-mode, [data-theme='light'] {
+  
+  /* Text adjustments to invert to charcoal black elements */
+  .quick-schedule-title,
+  .page-title {
+    color: #111827 !important;
+  }
+
+  .period-code,
+  .assign-name,
+  .reminder-name {
+    color: #1f2937 !important;
+  }
+
+  .period-time,
+  .period-meta,
+  .assign-meta,
+  .reminder-time,
+  .page-eyebrow {
+    color: #4b5563 !important;
+  }
+
+  /* Adjust inactive day pills backplate to blend with light canvases cleanly */
+  .day-strip .day-pill:not(.active) {
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
+    border: 1px solid #e5e7eb !important;
   }
 }

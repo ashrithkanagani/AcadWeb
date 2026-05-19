@@ -1,4 +1,4 @@
-/* ── TIMETABLE DAY STRIP & CARDS (UPDATED) ── */
+/* ── TIMETABLE DAY STRIP & CARDS (FULLY ADAPTIVE) ── */
 .tt-success-banner {
   background: rgba(46, 125, 50, 0.1);
   border: 1px solid rgba(46, 125, 50, 0.3);
@@ -16,13 +16,16 @@
 .day-strip {
   display: flex; gap: 12px; overflow-x: auto; padding-bottom: 0; margin-bottom: 24px;
 }
+
 .day-pill {
-  background: var(--surface); border: 1px solid var(--border);
+  background: var(--surface); 
+  border: 1px solid var(--border);
   color: var(--text-muted);
   width: 70px; height: 70px; border-radius: 12px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   cursor: pointer; transition: all 0.2s; padding: 0; flex-shrink: 0;
 }
+
 .day-pill:hover { border-color: #5b8dee; color: var(--text); }
 .day-pill.active { background: #5b8dee; border-color: #5b8dee; color: #ffffff; }
 
@@ -32,6 +35,7 @@
 .periods-wrap {
   display: flex; flex-direction: column; gap: 16px;
 }
+
 .period-card {
   background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--clr);
   border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px;
@@ -44,11 +48,51 @@
   display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0;
   color: var(--clr);
 }
+
 .period-body { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.period-code { font-weight: 700; font-size: 1.1rem; color: #ffffff; line-height: 1.2; }
-.period-time { font-family: var(--font-mono); font-size: 0.9rem; color: #999; line-height: 1; font-weight: 500; }
+
+/* FIXED: Changed hardcoded hex values to use responsive system theme color variables */
+.period-code { 
+  font-weight: 700; 
+  font-size: 1.1rem; 
+  color: var(--text-main, #ffffff); 
+  line-height: 1.2; 
+}
+
+.period-time { 
+  font-family: var(--font-mono); 
+  font-size: 0.9rem; 
+  color: var(--text-muted, #999999); 
+  line-height: 1; 
+  font-weight: 500; 
+}
 
 .period-meta-group { display: flex; flex-direction: column; gap: 4px; }
-.period-meta { font-size: 0.8rem; color: #888; display: flex; align-items: center; gap: 8px; font-weight: 500; }
+
+.period-meta { 
+  font-size: 0.8rem; 
+  color: var(--text-muted, #888888); 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-weight: 500; 
+}
 
 .period-chevron { color: var(--text-muted); font-size: 1.5rem; opacity: 0.4; padding-left: 10px; flex-shrink: 0; }
+
+
+/* ── EXPLICIT LIGHT MODE BACK-STOP CONTRAST CASING ── */
+body.light-mode, [data-theme='light'] {
+  .period-code {
+    color: #1f2937 !important; /* Forces rich charcoal text in light theme */
+  }
+  .period-time {
+    color: #4b5563 !important; /* Visible mid-tone slate text */
+  }
+  .period-meta {
+    color: #6b7280 !important; /* Clean slate grey text for readability */
+  }
+  .quick-schedule-title, .page-title {
+    color: #111827 !important; /* Inverts header titles to black */
+  }
+}

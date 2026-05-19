@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
-import axios from 'axios'; // <-- ADDED AXIOS
+import axios from 'axios';
 
 export default function PhotoToPdf() {
   // 1. GET GLOBAL STATE
-  const { files, setFiles } = useAppContext();
+  // UPDATED: Destructured user context straight from the global context provider hook
+  const { files, setFiles, user } = useAppContext();
   
   // Filter out ONLY the folders to show in the destination list
   const availableFolders = files.filter(f => f.type === 'folder');
@@ -103,13 +104,19 @@ export default function PhotoToPdf() {
     setConversionSuccess(false);
 
     try {
-      // Get the logged-in user
-      const username = localStorage.getItem("username");
-      if (!username) {
+      // FIXED: Pull credentials from runtime context matching AppContext setup fallback rules
+      if (!user) {
         alert("Please log in to save files to the cloud.");
         setIsConverting(false);
         return;
       }
+
+      // Extract username string matching backend data payload expectations
+      const activeUsername = user.username ?? user.id;
+
+      // Find selected destination details safely
+      const targetFolder = availableFolders.find(f => f.name === selectedFolder);
+      const targetFolderId = targetFolder ? targetFolder.id : 'root';
 
       // 1. Prepare the physical file
       const fileExtension = selectedImage.substring(selectedImage.lastIndexOf('.')) || '.jpg';
@@ -118,26 +125,25 @@ export default function PhotoToPdf() {
 
       // 2. Package it up for FastAPI
       const formData = new FormData();
-      formData.append("username", username);
+      formData.append("username", activeUsername);
       formData.append("file", physicalFile);
+      // OPTIONAL BACKEND ENHANCEMENT: Forward targetFolderId parameters if Python maps directory models
+      formData.append("parentId", targetFolderId);
 
       // 3. Send to MongoDB via Python
-      const response = await axios.post("http://localhost:8000/photos/", formData, {
+      const response = await axios.post("http://localhost:8000/files/", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
       // 4. Update your local React UI state so the folder system still works visually
-      const targetFolder = availableFolders.find(f => f.name === selectedFolder);
-      const targetFolderId = targetFolder ? targetFolder.id : 'root';
-      
       const newFile = {
-        id: response.data.id, // Use the real ID from MongoDB
+        id: response.data.id || Date.now().toString(), // Use fallback string token identifier if api is raw
         type: 'file',
         icon: '🖼️',
         name: fullFilename,
         parentId: targetFolderId,
         meta: (selectedImageData.length / 1024).toFixed(1) + ' KB',
-        url: selectedImageData, 
+        url: response.data.url ?? selectedImageData, 
         imageData: selectedImageData 
       };
       

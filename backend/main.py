@@ -1,43 +1,22 @@
 import os
 import json
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from routers import files
-from routers import files, photos
-
-# CORRECTED: Removed SQL models, added your new MongoDB users_collection and client
+from routers import files, photos, reminders, notes, auth, assignments
 from database import users_collection, client as mongo_client
-from routers import notes, auth, assignments
 
 # 1. Load Environment Variables
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
-# 2. Initialize Database Tables (MongoDB handles this automatically!)
-
-# 3. Initialize FastAPI App
-app = FastAPI(title="AcadMind API")
-
-# 4. Configure CORS (CRITICAL FOR REACT)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173"
-    ], 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 5. AUTO CREATE MOCK ACCOUNTS (CORRECTED FOR MONGODB)
+# 2. Dynamic Mock User Generation Core
 async def create_mock_users():
     try:
-        # MongoDB way to check for users and insert them if missing
         if not await users_collection.find_one({"username": "ash"}):
             await users_collection.insert_one({"username": "ash", "password": "123"})
             
@@ -45,25 +24,34 @@ async def create_mock_users():
             await users_collection.insert_one({"username": "ash1", "password": "234"})
     except Exception as exc:
         print("MongoDB startup error:", exc)
-        print("Check your MONGO_URL value in .env and verify your Atlas username/password or local MongoDB connection.")
+        print("Check your MONGO_URL value in .env and verify your connection details.")
         raise
 
-# Run the mock user creation when FastAPI starts up
-@app.on_event("startup")
-async def startup_event():
-    # 1. Ping the database to test the connection
+# 3. MODERN LIFESPAN LIFECYCLE CONTROLLER (Replaces deprecated on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # RUN ON STARTUP
     try:
         await mongo_client.admin.command('ping')
-        print("✅ Pinged your deployment. You successfully connected to MongoDB!")
+        print("**Pinged your deployment. You successfully connected to MongoDB!")
     except Exception as e:
-        print(f"❌ MongoDB Connection Error: {e}")
-
-    # 2. Run the mock user creation
+        print(f"MongoDB Connection Error: {e}")
+    
     await create_mock_users()
+    yield
+    # RUN ON SHUTDOWN (Optional database cleanups can go here)
 
-# (The ensure_assignments_user_id_column function was removed because 
-# MongoDB is schema-less. You never have to manually ALTER TABLE again!)
+# 4. Initialize FastAPI App with Lifespan
+app = FastAPI(title="AcadMind API", lifespan=lifespan)
 
+# 5. Configure CORS (CRITICAL FOR REACT)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ==========================================
 # TIMETABLE AI LOGIC
@@ -164,11 +152,12 @@ def process_timetable(file: UploadFile = File(...)):
 # ==========================================
 # REGISTER ROUTERS
 # ==========================================
-
 app.include_router(auth.router)
 app.include_router(notes.router)
 app.include_router(assignments.router)
+app.include_router(reminders.router)
 app.include_router(files.router)
+app.include_router(photos.router)
 
 @app.get("/")
 def root():
@@ -176,5 +165,4 @@ def root():
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

@@ -5,11 +5,12 @@ export default function Settings() {
   const { settings, updateSettings, logout } = useAppContext();
   const navigate = useNavigate();
 
+  // Deconstruct blocks with structured object safety fallbacks
   const {
     appearance = { darkMode: true, compactView: false },
     notifications = { browserNotifs: true, assignmentReminders: true },
     profile = { name: 'User', email: 'user@university.edu' }
-  } = settings;
+  } = settings || {};
 
   const handleToggleAppearance = (key) => {
     updateSettings('appearance', {
@@ -33,7 +34,6 @@ export default function Settings() {
   };
 
   const handleSaveChanges = () => {
-    // Settings are auto-saved, just show feedback
     alert('Profile updated successfully!');
   };
 
