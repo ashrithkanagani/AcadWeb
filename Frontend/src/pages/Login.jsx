@@ -57,7 +57,9 @@ export default function Login() {
 
     try {
       // 1. Hit your new FastAPI signup route!
-      const res = await fetch('http://127.0.0.1:8000/auth/signup', {
+      const API = import.meta.env.VITE_API_URL;
+
+const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
