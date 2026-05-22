@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Ensure this points to the correct context file!
 import { useAppContext } from '../context/AppContext.jsx'; 
 
 export default function Login() {
-  const [isSignup, setIsSignup] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { setUser } = useAppContext(); // Changed from login to setUser based on our recent AppContext update
+  const { setUser } = useAppContext(); 
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -22,46 +19,7 @@ export default function Login() {
     try {
       const API = import.meta.env.VITE_API_URL;
 
-const res = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const user = await res.json();
-      
-      if (res.ok) {
-        setUser(user); // Pass the user object to global context
-        navigate('/'); // Go to Dashboard
-      } else {
-        setError(user.detail || 'Login failed');
-      }
-    } catch (error) {
-      setError('Network error. Is your Python backend running?');
-    }
-    setIsLoading(false);
-  };
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // 1. Hit your new FastAPI signup route!
-      const API = import.meta.env.VITE_API_URL;
-
-const res = await fetch(`${API}/auth/login`, {
+      const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -70,11 +28,10 @@ const res = await fetch(`${API}/auth/login`, {
       const user = await res.json();
       
       if (res.ok) {
-        // 2. If signup is successful, log them right in!
         setUser(user); 
         navigate('/'); 
       } else {
-        setError(user.detail || 'Signup failed');
+        setError(user.detail || 'Login failed');
       }
     } catch (error) {
       setError('Network error. Is your Python backend running?');
@@ -147,10 +104,10 @@ const res = await fetch(`${API}/auth/login`, {
           }}
         >
           <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: '700' }}>
-            {isSignup ? 'Create Account' : 'Welcome Back'}
+            Welcome Back
           </h2>
           <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            {isSignup ? 'Sign up to get started' : 'Sign in to your account'}
+            Sign in to your account
           </p>
         </div>
 
@@ -173,7 +130,7 @@ const res = await fetch(`${API}/auth/login`, {
         )}
 
         {/* Form */}
-        <form onSubmit={isSignup ? handleSignup : handleLogin}>
+        <form onSubmit={handleLogin}>
           <div className="form-group">
             <label className="form-label">Username</label>
             <input
@@ -198,55 +155,15 @@ const res = await fetch(`${API}/auth/login`, {
             />
           </div>
 
-          {isSignup && (
-            <div className="form-group">
-              <label className="form-label">Confirm Password</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-          )}
-
           <button
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', justifyContent: 'center', marginBottom: '16px' }}
             disabled={isLoading}
           >
-            {isLoading ?  'Create Account' : 'Sign In'}
+            {isLoading ? 'Connecting...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Toggle */}
-        <div style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          
-          <button
-            onClick={() => {
-              setIsSignup(!isSignup);
-              setError('');
-              setUsername('');
-              setPassword('');
-              setConfirmPassword('');
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--mint)',
-              cursor: 'pointer',
-              fontWeight: '600',
-              textDecoration: 'underline',
-            }}
-          >
-            {/* {isSignup ? 'Sign In' : 'Sign Up'} */}
-          </button>
-        </div>
-
-        {/* Demo Credentials */}
       </div>
     </div>
   );
